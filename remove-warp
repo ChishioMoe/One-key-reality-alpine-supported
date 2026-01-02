@@ -98,61 +98,56 @@ fi
 pause
 
 # ====================================================
-# 4. 安装 Xray (绕过 Systemd 检测的暴力安装)
+# 4. 安装 Xray (纯手动模式，解决 Systemd 报错)
 # ====================================================
-echo -e "${yellow}正在强制安装 Xray...$none"
+echo -e "${yellow}正在安装 Xray (跳过官方脚本)...$none"
 
-# 1. 安装必要的解压工具 (Alpine 必须)
+# 1. 必须安装解压工具 (Alpine 默认没有)
 if [ -f /etc/alpine-release ]; then
+    echo "安装 unzip..."
     apk add --no-cache unzip curl >/dev/null 2>&1
 fi
 
-# 2. 确定系统架构 (x86_64 或 arm64)
-ARCH=$(uname -m)
-case $ARCH in
-    x86_64)  DOWNLOAD_ARCH="64" ;;
-    aarch64) DOWNLOAD_ARCH="arm64-c" ;;
-    *)       echo -e "${red}不支持的架构: $ARCH$none"; exit 1 ;;
-esac
+# 2. 定义安装目录
+XRAY_BIN="/usr/local/bin/xray"
+mkdir -p /usr/local/bin
+mkdir -p /usr/local/share/xray
 
-# 3. 设置下载链接 (直接下载 v1.8.24，避开脚本检测)
-# 如果你需要最新版，这里只是下载文件，不会触发 systemd 报错
-VERSION="v1.8.24"
-DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/download/${VERSION}/Xray-linux-${DOWNLOAD_ARCH}.zip"
+# 3. 手动下载核心文件 (直接下载 v1.8.24，稳定且无需 Systemd)
+# 注意：这里直接下载 Linux-64位 版本。如果你是 ARM 架构请告诉我会换链接。
+DOWNLOAD_URL="https://github.com/XTLS/Xray-core/releases/download/v1.8.24/Xray-linux-64.zip"
 
-echo -e "正在下载 Xray 核心 (${VERSION})..."
-wget -O /tmp/xray.zip "$DOWNLOAD_URL" >/dev/null 2>&1
-
+echo "正在下载 Xray 核心..."
+wget -O /tmp/xray.zip "$DOWNLOAD_URL"
 if [ $? -ne 0 ]; then
-    echo -e "${red}下载失败！请检查网络。$none"
+    echo -e "${red}下载失败！请检查网络连接。$none"
     exit 1
 fi
 
-# 4. 解压并安装
-echo -e "正在解压并安装..."
+# 4. 解压并归位
+echo "正在解压..."
 unzip -o /tmp/xray.zip -d /tmp/xray_dist >/dev/null 2>&1
 
-# 强制移动二进制文件
-rm -f /usr/local/bin/xray
-mv /tmp/xray_dist/xray /usr/local/bin/xray
-chmod +x /usr/local/bin/xray
+# 移动主程序
+rm -f "$XRAY_BIN"
+mv /tmp/xray_dist/xray "$XRAY_BIN"
+chmod +x "$XRAY_BIN"
 
-# 强制移动 Geo 文件
-mkdir -p /usr/local/share/xray
+# 移动 Geo 文件
 mv /tmp/xray_dist/geoip.dat /usr/local/share/xray/ 2>/dev/null
 mv /tmp/xray_dist/geosite.dat /usr/local/share/xray/ 2>/dev/null
 
-# 清理
+# 清理临时文件
 rm -rf /tmp/xray.zip /tmp/xray_dist
 
-# 5. 最终验证
-XRAY_BIN="/usr/local/bin/xray"
+# 5. 验证安装
 if [ ! -f "$XRAY_BIN" ]; then
-    echo -e "${red}安装失败：文件未就位。$none"
+    echo -e "${red}致命错误：手动安装失败，文件未移动成功。$none"
     exit 1
-else
-    echo -e "${green}Xray 安装成功！路径: $XRAY_BIN$none"
 fi
+
+echo -e "${green}Xray 安装成功！路径: $XRAY_BIN$none"
+
 
 # ====================================================
 # 5. 交互式配置 (适配修正后的路径)
