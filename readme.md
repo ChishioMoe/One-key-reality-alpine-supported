@@ -1,4 +1,4 @@
-# 重点是支持alpine系统，很爽!
+# 一键配置
 ```
 bash <(curl -L https://raw.githubusercontent.com/ChishioMoe/One-key-reality-alpine-supported/refs/heads/main/main.sh)
  ```
